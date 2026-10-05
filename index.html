@@ -1,0 +1,571 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#F0395F" />
+    <meta name="description" content="ai爱 —— 纯前端运行，数据留在本机。" />
+    <meta name="apple-mobile-web-app-title" content="ai爱" />
+    <meta name="application-name" content="ai爱" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="icon" href="/icons/icon-192.png" />
+    <title>ai爱</title>
+
+    <!--
+      ★★★ 首屏兜底样式（2026-10-04 加，P0 白屏修复的一部分）。
+
+      为什么必须**内联**、且不依赖任何 JS：
+        真机白屏事故的现场是 —— WebView 的 body 背景是 `rgba(0,0,0,0)`（透明），
+        React 又没渲染出来，于是整个屏幕透出系统的深色窗口背景
+        `@android:color/background_dark`（#111111）。用户看到的"黑屏"就是这个。
+        既然"没渲染"时背景透明本身就是事故的一部分，那就**在 HTML 里把背景写死**，
+        让它不再依赖 JS / MUI 才有底色。
+    -->
+    <style>
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        /* 与 themeTokens 的 light.bg 一致，避免首帧闪色 */
+        background-color: #f7f7f8;
+        color-scheme: light dark;
+      }
+      @media (prefers-color-scheme: dark) {
+        html,
+        body {
+          /* 与 themeTokens 的 dark.bg 一致 */
+          background-color: #161a22;
+        }
+      }
+      /* ── 静态启动页：纯 HTML + CSS，不依赖 JS ── */
+      #boot {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 14px;
+        font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+        color: #6b7280;
+        font-size: 14px;
+        text-align: center;
+        padding: 24px;
+        box-sizing: border-box;
+      }
+      @media (prefers-color-scheme: dark) {
+        #boot {
+          color: #9aa4b2;
+        }
+      }
+      #boot .spinner {
+        width: 26px;
+        height: 26px;
+        border: 2px solid rgba(150, 150, 160, 0.35);
+        border-top-color: #f0395f;
+        border-radius: 50%;
+        animation: boot-spin 0.9s linear infinite;
+      }
+      @keyframes boot-spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+      /* ── 启动错误面板：同样纯 HTML + CSS ── */
+      #boot-error {
+        display: none;
+        position: fixed;
+        inset: 0;
+        overflow: auto;
+        padding: 24px 18px;
+        box-sizing: border-box;
+        font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+        background-color: #f7f7f8;
+        color: #1f2430;
+        z-index: 2147483647;
+      }
+      @media (prefers-color-scheme: dark) {
+        #boot-error {
+          background-color: #161a22;
+          color: #e6e9ef;
+        }
+      }
+      #boot-error h1 {
+        font-size: 17px;
+        margin: 0 0 8px;
+      }
+      #boot-error p {
+        font-size: 13px;
+        line-height: 1.6;
+        margin: 0 0 12px;
+        opacity: 0.85;
+      }
+      #boot-error pre {
+        font-size: 11px;
+        line-height: 1.5;
+        white-space: pre-wrap;
+        word-break: break-all;
+        background: rgba(128, 128, 140, 0.12);
+        border-radius: 8px;
+        padding: 10px;
+        margin: 0 0 14px;
+        max-height: 40vh;
+        overflow: auto;
+      }
+      #boot-error button {
+        font: inherit;
+        font-size: 14px;
+        padding: 10px 18px;
+        min-height: 44px;
+        border: 0;
+        border-radius: 8px;
+        background: #f0395f;
+        color: #fff;
+      }
+    </style>
+
+    <script>
+      /**
+       * ★★ 存储键改名迁移：`aiyu.*` → `ai-ai.*`（2026-10-05 全项目改名）。
+       *
+       * ── 为什么必须放在这里（**不能挪到 main.tsx**）─────────────────────
+       *  ① 紧接其后的防闪烁脚本会**提前读** `ai-ai.theme.v1`；
+       *  ② 更根本的是：zustand 各 store 在 **import 时就同步读 localStorage**
+       *     （`create()` 里直接取值），而 ESM 的 `import` 会在模块体执行前求值
+       *     ⇒ 放进 `main.tsx` 就**晚于** store 初始化，store 会先采到默认值、
+       *     甚至把默认值写回新键 ⇒ 用户配置被"重置"。
+       *  ⇒ 只能放在 `index.html` 的内联脚本里 —— 它先于**一切** JS 模块。
+       *
+       * ── 三条设计要点 ────────────────────────────────────────────────
+       *  ① **规则式而非枚举**：按 `aiyu` 前缀匹配，于是
+       *     `aiyu.module.v1.<任意后缀>` 这种**动态前缀族**也一并覆盖，不会漏。
+       *  ② **幂等**：搬完旧键即删 ⇒ 下次启动无键可匹配 ⇒ 空操作。
+       *  ③ **失败降级**：`try/catch` 吞掉异常（隐私模式禁 localStorage、
+       *     配额不足等）。最坏是"键没搬成"——旧键还在、应用按新键读到默认值，
+       *     **应用照常可用，不会白屏**。宁可丢配置也不能打不开。
+       *
+       * ★ 本块必须保持同步、内联、无依赖（与下面的防闪烁脚本同规格）。
+       */
+      (function () {
+        try {
+          var keys = [];
+          for (var i = 0; i < localStorage.length; i++) keys.push(localStorage.key(i));
+          for (var j = 0; j < keys.length; j++) {
+            var k = keys[j];
+            if (k === null || k.indexOf('aiyu') !== 0) continue;
+            var nk = 'ai-ai' + k.slice(4); // aiyu.settings.v1 → ai-ai.settings.v1
+            // 新键已存在则**不动它**（说明已迁过、或用户在新版写过值 —— 新值优先）
+            if (localStorage.getItem(nk) === null) {
+              localStorage.setItem(nk, localStorage.getItem(k));
+            }
+            localStorage.removeItem(k);
+          }
+        } catch (e) {
+          /* 迁移失败不阻塞启动：旧键保留，应用按新键读到默认值 */
+        }
+      })();
+    </script>
+
+    <script>
+      /**
+       * 首屏防闪烁脚本（T01 验收要点②）。
+       * 只读取 `ai-ai.theme.v1` 这一项（键名见 constants/storageKeys.ts），
+       * 在 React 挂载前就把 dark/grayscale 类套到 <html> 上，避免深浅色切换时的白屏闪烁。
+       * 该脚本必须保持同步、内联、无依赖。
+       */
+      (function () {
+        try {
+          var raw = localStorage.getItem('ai-ai.theme.v1');
+          var snap = raw ? JSON.parse(raw) : null;
+          var setting = (snap && snap.darkMode) || 'system';
+          var prefersDark =
+            typeof window.matchMedia === 'function' &&
+            window.matchMedia('(prefers-color-scheme: dark)').matches;
+          var isDark = setting === 'dark' || (setting === 'system' && prefersDark);
+          var root = document.documentElement;
+          if (isDark) root.classList.add('dark');
+          if (snap && snap.grayscale) root.classList.add('grayscale');
+          root.style.colorScheme = isDark ? 'dark' : 'light';
+        } catch (e) {
+          /* 主题预设失败不应阻塞启动，保留默认浅色 */
+        }
+      })();
+    </script>
+
+    <script>
+      /**
+       * ★★★ 新 API 兜底（polyfill）—— 真机白屏 P0 的**根因修复**（2026-10-04）。
+       *
+       * ── 事故经过 ────────────────────────────────────────────────
+       * 用户真机录屏：打开应用是**纯 #111111 的空白屏**，完全无法使用。
+       * 本地逐帧取证：该颜色 = Android 框架色 `@android:color/background_dark`，
+       * 即「WebView 里什么都没渲染，透出了系统的深色窗口背景」。
+       * 用 CDP 模拟老 WebView（删掉若干新 API）后**本地复现**，抓到真正的报错：
+       *
+       *     ReferenceError: structuredClone is not defined
+       *         at …/assets/index-*.js
+       *
+       * ── 为什么会这样 ────────────────────────────────────────────
+       * `src/constants/defaults.ts` 在**模块初始化**阶段就调用 `structuredClone(...)`
+       * （chat / appearance / ilink 三个设置分组各一次，用来避免多个分组共享同一个可变对象）。
+       * 而 `structuredClone` 是 **Chrome / Android System WebView 98+（2022-02）** 才有的 API。
+       * 用户机器的 WebView 低于该版本 ⇒ 该调用抛 `ReferenceError` ⇒
+       * **整个入口模块求值失败** ⇒ React 从未挂载 ⇒ 白屏。
+       *
+       * ★ 为什么错误边界（ErrorBoundary）兜不住：
+       *   `<ErrorBoundary>` 挂在 `App` **内部**，而错误发生在 `App` 自身的求值过程中 ——
+       *   边界在错误点的**下方**，抓不到。React 于是卸载整棵树。
+       *   这解释了现场为什么**没有**出现崩溃页，而是一片空白。
+       *
+       * ★ 为什么此前所有本地验证都没发现：
+       *   本机 Chrome / Node 的引擎都很新，`structuredClone` 一直存在，
+       *   所以「浏览器里一切正常」和「真机上白屏」可以同时成立。
+       *   ⇒ 教训：**浏览器能跑 ≠ APK 能跑**，验证必须覆盖"低版本 WebView"这一档。
+       *
+       * ── 这一段的职责与边界 ───────────────────────────────────────
+       * 职责：只补**有明确版本门槛、且被无保护调用**的成员。
+       * 边界：这是**兼容兜底**，不是"支持古老的 Android"承诺；
+       *   真机最低要求仍是「Android System WebView 能更新到较新版本」。
+       *
+       * ⚠️ 本段必须是 **ES5**：它要在最古老的引擎上也能跑通 ——
+       *    如果这里用了 `const` / 箭头函数，兜底脚本自己就会先崩。
+       *    同理，它必须**内联同步**执行，且在任何 module script 之前。
+       */
+      (function () {
+        'use strict';
+
+        /* ── ① structuredClone（Chrome 98+）—— 本次事故的直接原因 ───────── */
+        if (typeof window.structuredClone !== 'function') {
+          /** 深度克隆。覆盖本项目实际用到的数据类型（POJO / 数组 / Date / Map / Set / 二进制）。 */
+          var deepClone = function (value, seen) {
+            // 原始值直接返回
+            if (value === null || typeof value !== 'object') return value;
+
+            // 循环引用：按"源对象 → 克隆体"的记忆返回，避免死递归
+            for (var i = 0; i < seen.length; i++) {
+              if (seen[i][0] === value) return seen[i][1];
+            }
+
+            var out;
+            var tag = Object.prototype.toString.call(value);
+
+            if (value instanceof Date) return new Date(value.getTime());
+            if (value instanceof RegExp) return new RegExp(value.source, value.flags || '');
+
+            if (tag === '[object ArrayBuffer]') return value.slice(0);
+            // TypedArray / DataView：用同一个构造器复制，保留类型
+            if (typeof ArrayBuffer !== 'undefined' && ArrayBuffer.isView && ArrayBuffer.isView(value)) {
+              try {
+                return new value.constructor(value.buffer.slice(0));
+              } catch (e) {
+                return value;
+              }
+            }
+
+            if (tag === '[object Map]') {
+              out = new Map();
+              seen.push([value, out]);
+              value.forEach(function (v, k) {
+                out.set(deepClone(k, seen), deepClone(v, seen));
+              });
+              return out;
+            }
+            if (tag === '[object Set]') {
+              out = new Set();
+              seen.push([value, out]);
+              value.forEach(function (v) {
+                out.add(deepClone(v, seen));
+              });
+              return out;
+            }
+
+            if (Array.isArray(value)) {
+              out = new Array(value.length);
+              seen.push([value, out]);
+              for (var j = 0; j < value.length; j++) out[j] = deepClone(value[j], seen);
+              return out;
+            }
+
+            // 普通对象（含 Object.create(null) 的情况）
+            out = {};
+            seen.push([value, out]);
+            for (var k in value) {
+              if (Object.prototype.hasOwnProperty.call(value, k)) out[k] = deepClone(value[k], seen);
+            }
+            return out;
+          };
+
+          window.structuredClone = function (value) {
+            return deepClone(value, []);
+          };
+        }
+
+        /* ── ② Object.hasOwn（Chrome 93+）──────────────────────────────── */
+        if (typeof Object.hasOwn !== 'function') {
+          Object.defineProperty(Object, 'hasOwn', {
+            value: function (obj, key) {
+              if (obj === null || obj === undefined) {
+                throw new TypeError('Cannot convert undefined or null to object');
+              }
+              return Object.prototype.hasOwnProperty.call(Object(obj), key);
+            },
+            writable: true,
+            configurable: true,
+          });
+        }
+
+        /* ── ③ Array.prototype.at / String.prototype.at（Chrome 92+）────── */
+        var defineAt = function (proto, isString) {
+          if (!proto || typeof proto.at === 'function') return;
+          Object.defineProperty(proto, 'at', {
+            value: function (n) {
+              var len = this.length >>> 0;
+              var i = Math.trunc(Number(n) || 0);
+              if (i < 0) i += len;
+              if (i < 0 || i >= len) return undefined;
+              return isString ? String.prototype.charAt.call(this, i) : this[i];
+            },
+            writable: true,
+            configurable: true,
+          });
+        };
+        defineAt(Array.prototype, false);
+        defineAt(String.prototype, true);
+
+        /* ── ④ findLast / findLastIndex（Chrome 97+）───────────────────── */
+        if (typeof Array.prototype.findLast !== 'function') {
+          Object.defineProperty(Array.prototype, 'findLast', {
+            value: function (fn, thisArg) {
+              for (var i = this.length - 1; i >= 0; i--) {
+                if (fn.call(thisArg, this[i], i, this)) return this[i];
+              }
+              return undefined;
+            },
+            writable: true,
+            configurable: true,
+          });
+        }
+        if (typeof Array.prototype.findLastIndex !== 'function') {
+          Object.defineProperty(Array.prototype, 'findLastIndex', {
+            value: function (fn, thisArg) {
+              for (var i = this.length - 1; i >= 0; i--) {
+                if (fn.call(thisArg, this[i], i, this)) return i;
+              }
+              return -1;
+            },
+            writable: true,
+            configurable: true,
+          });
+        }
+
+        /* ── ⑤ toSorted / toReversed（Chrome 111+）─────────────────────── */
+        if (typeof Array.prototype.toSorted !== 'function') {
+          Object.defineProperty(Array.prototype, 'toSorted', {
+            value: function (fn) {
+              return Array.prototype.slice.call(this).sort(fn);
+            },
+            writable: true,
+            configurable: true,
+          });
+        }
+        if (typeof Array.prototype.toReversed !== 'function') {
+          Object.defineProperty(Array.prototype, 'toReversed', {
+            value: function () {
+              return Array.prototype.slice.call(this).reverse();
+            },
+            writable: true,
+            configurable: true,
+          });
+        }
+
+        /* ── ⑥ reportError（Chrome 90+）────────────────────────────────── */
+        if (typeof window.reportError !== 'function') {
+          window.reportError = function (err) {
+            // 保留控制台可见性即可；启动期的收集由下面的看门狗负责
+            try {
+              if (typeof console !== 'undefined' && console.error) console.error('[reportError]', err);
+            } catch (e) {
+              /* 忽略 */
+            }
+          };
+        }
+      })();
+    </script>
+
+    <script>
+      /**
+       * ★★★ 启动看门狗 —— 让"白屏"在物理上不可能发生（2026-10-04，P0 修复）。
+       *
+       * 设计原则：**失败要可见，不要留白**。
+       *   白屏是最糟的失败形态：用户不知道是卡住、崩了还是没装好，我们也拿不到任何信息。
+       *   所以这里做两件事：
+       *     ① 收集启动期的一切异常（含模块求值期的 `ReferenceError`，
+       *        以及被 React 边界吞掉的错误 —— 后者由 main.tsx 主动上报）；
+       *     ② 若到期仍未挂载成功，把错误**直接画在屏幕上**，附 UA 与重载按钮。
+       *
+       * 判据用「`#root` 里有没有真实内容」，而不是"有没有报错" ——
+       *   因为存在"没报错但也没渲染"的情况（例如资源被拦掉）。
+       */
+      (function () {
+        'use strict';
+
+        var bootErrors = [];
+        window.__aiAiBootErrors = bootErrors;
+
+        var describe = function (err) {
+          if (!err) return '(无信息)';
+          if (typeof err === 'string') return err;
+          if (err.stack) return String(err.stack);
+          if (err.message) return String(err.message);
+          try {
+            return JSON.stringify(err);
+          } catch (e) {
+            return String(err);
+          }
+        };
+
+        window.__aiAiBootNote = function (label, detail) {
+          bootErrors.push(label + (detail ? '：' + describe(detail) : ''));
+        };
+
+        /**
+         * ★ 必须用**捕获阶段**（第三个参数 `true`）：
+         *   资源加载失败（`<script>` / `<link>` 404）触发的是**不冒泡**的 error 事件，
+         *   只有挂在捕获阶段才能在 window 上收到。
+         *
+         *   实测踩坑（2026-10-04）：第一版没写 `true`，于是入口 chunk 404 的实验中，
+         *   错误面板虽然弹出来了，却只能显示"没有捕获到错误信息" ——
+         *   面板本身是兜底成功的，但**最关键的那条信息（哪个资源挂了）丢了**。
+         *   对排查来说，这等于白装。
+         */
+        window.addEventListener(
+          'error',
+          function (event) {
+            // 资源加载失败（script/link）的 event.error 为 null，用 target 补充信息
+            var t = event && event.target;
+            if (t && t !== window && (t.tagName === 'SCRIPT' || t.tagName === 'LINK')) {
+              bootErrors.push(
+                '资源加载失败：<' +
+                  String(t.tagName).toLowerCase() +
+                  ' ' +
+                  (t.src || t.href) +
+                  '>（网络 404 / 被拦截 / 文件缺失）',
+              );
+              return;
+            }
+            bootErrors.push('未捕获错误：' + describe(event && (event.error || event.message)));
+          },
+          true,
+        );
+
+        window.addEventListener('unhandledrejection', function (event) {
+          bootErrors.push('未处理的 Promise 拒绝：' + describe(event && event.reason));
+        });
+
+        /** 判断 React 是否已经真正渲染出内容 */
+        var reactMounted = function () {
+          var root = document.getElementById('root');
+          return !!(root && root.childElementCount > 0);
+        };
+
+        var showErrorPanel = function () {
+          var panel = document.getElementById('boot-error');
+          if (!panel || panel.getAttribute('data-shown') === '1') return;
+          panel.setAttribute('data-shown', '1');
+
+          // 去重（同一个错误常被多路捕获），再渲染
+          var seen = {};
+          var lines = [];
+          for (var i = 0; i < bootErrors.length; i++) {
+            var s = String(bootErrors[i]);
+            if (!seen[s]) {
+              seen[s] = 1;
+              lines.push('· ' + s);
+            }
+          }
+          if (lines.length === 0) lines.push('· 没有捕获到错误信息（可能是资源被拦截，或引擎过旧）');
+
+          var detail = document.getElementById('boot-error-detail');
+          if (detail) {
+            detail.textContent =
+              lines.join('\n\n') +
+              '\n\n── 环境信息（反馈时请一并提供）──\n' +
+              'UA: ' +
+              (navigator.userAgent || '(无)') +
+              '\nURL: ' +
+              (location.href || '(无)') +
+              '\n时间: ' +
+              new Date().toString();
+          }
+
+          var boot = document.getElementById('boot');
+          if (boot) boot.style.display = 'none';
+          panel.style.display = 'block';
+        };
+
+        // 上报入口（main.tsx 捕获到挂载异常时会主动调它）
+        window.__aiAiBootFail = function (label, err) {
+          window.__aiAiBootNote(label, err);
+          showErrorPanel();
+        };
+
+        /**
+         * 看门狗延时取 10s。
+         * 依据：本应用在真机上从 WebView 起到首屏可见通常在 1~3s 内；
+         *   10s 已远超正常范围，却仍短于用户耐心阈值 ——
+         *   宁可多等一会，也不要在"只是慢"的时候误报崩溃。
+         */
+        setTimeout(function () {
+          if (!reactMounted()) showErrorPanel();
+        }, 10000);
+
+        // 重载按钮 + 引擎能力探测（内联绑定，不依赖任何框架）
+        document.addEventListener('DOMContentLoaded', function () {
+          var btn = document.getElementById('boot-error-reload');
+          if (btn) {
+            btn.addEventListener('click', function () {
+              location.reload();
+            });
+          }
+
+          /**
+           * ★ 主动探测 WebView 能力，把结论写进错误信息。
+           *   白屏事故里最关键的一条信息就是"引擎支持什么" —— 让它现场自报，
+           *   而不是靠用户去设置里翻「Android System WebView 版本号」。
+           */
+          var probe = [];
+          if (typeof window.structuredClone !== 'function') probe.push('缺 structuredClone');
+          if (typeof Object.hasOwn !== 'function') probe.push('缺 Object.hasOwn');
+          if (typeof Promise !== 'function') probe.push('缺 Promise');
+          if (typeof window.fetch !== 'function') probe.push('缺 fetch');
+          if (typeof window.Proxy !== 'function') probe.push('缺 Proxy');
+          if (typeof window.IntersectionObserver !== 'function') probe.push('缺 IntersectionObserver');
+          if (probe.length > 0) window.__aiAiBootNote('引擎能力探测', probe.join('、'));
+        });
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+
+    <!-- 静态启动页：即使 JS 完全没跑起来，用户也**看得到东西** -->
+    <div id="boot">
+      <div class="spinner"></div>
+      <div>正在启动…</div>
+    </div>
+
+    <!-- 启动失败面板：由看门狗或 main.tsx 触发显示 -->
+    <div id="boot-error">
+      <h1>应用启动失败了</h1>
+      <p>
+        这不是网络问题，是应用在本机上没能正常初始化。下面是可以直接反馈给我的信息；
+        先点一次「重新加载」通常就能恢复。
+      </p>
+      <pre id="boot-error-detail"></pre>
+      <button id="boot-error-reload" type="button">重新加载</button>
+    </div>
+
+    <noscript>这个应用需要启用 JavaScript 才能运行。</noscript>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

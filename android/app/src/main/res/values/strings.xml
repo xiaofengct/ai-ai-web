@@ -1,0 +1,19 @@
+<?xml version='1.0' encoding='utf-8'?>
+<!--
+  ★★ 本文件**刻意不定义** app_name / title_activity_main / package_name / custom_url_scheme。
+
+  这四个值**随版本变化**（内置欣然 / 不内置欣然），真源在
+  `android/app/build.gradle` 的 `productFlavors { builtin { ... } standalone { ... } }`
+  （上层开关见 `src/constants/buildMode.ts`）。
+
+  为什么不写在这里：
+    写在这里会造出**第二个真相**——flavor 的 `resValue` 会覆盖本文件（覆盖机制是好的），
+    但改动 flavor 的人不会想到"还有一个 strings.xml 也写着同样的名字"，
+    于是阅读本文件的人会以为 app_name 是「原应用」，而实际打出来的包叫「ai爱」。
+    ⇒ 与其留一份"会被覆盖的过时值"，不如留空 + 指明真源。
+
+  引用面（已核）：只有 `AndroidManifest.xml` 的
+    `android:label="@string/app_name"` 与 `@string/title_activity_main`，
+    两者都由 flavor 的 `resValue` 提供。
+-->
+<resources />

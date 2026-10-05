@@ -1,0 +1,161 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================================
+   ai爱 Web · 全局样式
+   - Tailwind preflight 保留（负责布局类）
+   - MUI 侧由 CssBaseline + importantComponent 隔离（T01 验收要点④）
+   ============================================================ */
+
+:root {
+  --ai-ai-topbar-h: 56px;
+  --ai-ai-sidenav-w: 240px;
+  --ai-ai-tabs-h: 56px;
+  /*
+   * ★ 安全区（状态栏 / 刘海 / 手势条）。
+   *
+   * 为什么必须显式处理：`index.html` 的 viewport 带了 `viewport-fit=cover`，
+   * 且我们设了 `targetSdk 35` —— **Android 15 起强制 edge-to-edge**，
+   * 应用内容会被画到系统栏底下（这不是可选项）。
+   * 于是顶栏必须自己让开状态栏，否则标题会被时间/电量/网速压住（真机截图可证）。
+   *
+   * 兜底值给 0px：桌面浏览器与不支持该变量的环境 `env()` 取不到值，
+   * 若无兜底整条 `calc()` 会失效、顶栏高度归零。
+   */
+  --ai-ai-safe-top: env(safe-area-inset-top, 0px);
+  --ai-ai-safe-bottom: env(safe-area-inset-bottom, 0px);
+  color-scheme: light dark;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: theme('fontFamily.sans');
+  /* 移动端禁止横向橡皮筋影响浮层 */
+  overscroll-behavior-y: none;
+}
+
+/* ★ 全局灰度滤镜（FN-40 灰色化） */
+html.grayscale {
+  filter: grayscale(1);
+}
+
+/* 灰度开启时，图片/立绘一起变灰（filter 会继承到子元素，这里只是保证不重复叠加） */
+html.grayscale img,
+html.grayscale canvas,
+html.grayscale svg {
+  filter: none;
+}
+
+/* 细滚动条 */
+* {
+  scrollbar-width: thin;
+  scrollbar-width: 6px;
+  scrollbar-color: rgba(120, 128, 145, 0.5) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: rgba(120, 128, 145, 0.45);
+  border-radius: 999px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(120, 128, 145, 0.7);
+}
+
+/* 长文本与 Markdown 内容 */
+.markdown-body {
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+.markdown-body pre {
+  overflow-x: auto;
+  padding: 12px;
+  border-radius: 8px;
+}
+
+.markdown-body table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.markdown-body th,
+.markdown-body td {
+  border: 1px solid currentColor;
+  border-color: rgba(127, 127, 127, 0.35);
+  padding: 4px 8px;
+}
+
+.markdown-body code {
+  font-family: theme('fontFamily.mono');
+  font-size: 0.875em;
+}
+
+/* 立绘呼吸动画（Live2D 不可用时的降级表现） */
+@keyframes ai-ai-breathe {
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    transform: translateY(-4px) scale(1.012);
+  }
+}
+
+.ai-ai-breathe {
+  animation: ai-ai-breathe 4s ease-in-out infinite;
+}
+
+/* 拍一拍涟漪（FN-27） */
+@keyframes ai-ai-pat-ripple {
+  0% {
+    opacity: 0.55;
+    transform: scale(0.6);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.8);
+  }
+}
+
+.ai-ai-pat-ripple {
+  animation: ai-ai-pat-ripple 520ms ease-out forwards;
+}
+
+/* 尊重「减少动效」系统设置 */
+@media (prefers-reduced-motion: reduce) {
+  .ai-ai-breathe,
+  .ai-ai-pat-ripple {
+    animation: none !important;
+  }
+}
+
+/* 可拖拽浮层（桌宠 / 迷你播放器，SV-01/SV-04 降级实现） */
+.ai-ai-floating {
+  position: fixed;
+  z-index: 1300;
+  touch-action: none;
+  user-select: none;
+}
+
+/* 全屏文本页（PG-22）需要的等宽可读排版 */
+.ai-ai-reader {
+  max-width: 44rem;
+  line-height: 1.9;
+}

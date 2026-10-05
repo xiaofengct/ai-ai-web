@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!--
+  ★★ `allowBackup="false"`（2026-10-04 加固时改的，原值 true）
+
+  ── 为什么改（这是个"能一条命令把整个应用搬走"的开关）──────────────
+  `allowBackup="true"` 会同时打开两条路：
+    ① `adb backup` —— 一条命令把应用的全部私有数据导出成一个文件，
+       其中包含**聊天记录、记忆库、人格设定、用户填的 API Key**；
+    ② Android 自动备份（云端）—— 同一份数据会被送到用户的云备份里。
+  对一个本地应用来说，①尤其要命：它是**绕过所有应用内逻辑**的整库提取，
+  而且不需要应用配合。
+
+  ── 代价（如实记录，别粉饰）─────────────────────────────────────
+  应用数据**不再随 Android 的换机/云备份自动迁移**。
+  用户换手机时的正式通路是本应用自己的「设置 → 备份」：
+  导出一份备份包，在新机器上导入。这条路一直都在，不受本改动影响。
+
+  ── 为什么不加 `android:dataExtractionRules` 做细粒度控制 ──────────
+  那套规则（`<cloud-backup>` / `<device-transfer>`）能做得更精细，
+  但要按 API 31 前后写两份 XML，而收益只是"允许某些数据走云备份"。
+  本应用的数据是**高隐私的整体**（聊天记录 + 人设），
+  没有一个子集是"可以外流"的 ⇒ 一刀切关掉更简单、也更不容易漏。
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application
+        android:allowBackup="false"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:networkSecurityConfig="@xml/network_security_config"
+        android:theme="@style/AppTheme">
+        <activity
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode|navigation"
+            android:name=".MainActivity"
+            android:label="@string/title_activity_main"
+            android:theme="@style/AppTheme.NoActionBarLaunch"
+            android:launchMode="singleTask"
+            android:exported="true"
+            android:windowSoftInputMode="adjustResize">
+            <!--
+              ★ `windowSoftInputMode="adjustResize"` 必须**显式**写（2026-10-04 加）。
+
+              为什么：不写就是系统默认的 `adjustUnspecified`，在 edge-to-edge
+              （`targetSdk 35` + `viewport-fit=cover` 时 Android 15 强制开启）下，
+              系统会把它**退化成 `adjustNothing`** —— 软键盘弹出时 WebView 收不到高度变化，
+              表现为「输入框被键盘整块盖住」。这是聊天类应用的可用性致命伤。
+              （外部参考实现的 manifest 里也有同样的长注释，属于同一类踩坑。）
+
+              ⚠️ 这一条只是**前置条件**，不等于键盘问题已解决：
+              `adjustResize` 在多数 ROM 上够用，但部分国产 ROM（小米/OPPO/荣耀等）
+              在 edge-to-edge 下仍可能不让 WebView 收到 resize，需要在 JS 侧
+              用 `visualViewport` 兜底测量。**真机行为未验证**（见 docs/07 §11.9）。
+            -->
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/file_paths" />
+        </provider>
+    </application>
+
+    <!-- Permissions -->
+
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <!--
+      ★★ 相机权限（2026-10-04 加，供聊天的「拍照」按钮）。
+
+      ── 为什么**必须**写在这里（不写会怎样）──────────────────────────────
+      WebView 里的 `getUserMedia({video:true})` 在安卓上走的是原生 WebView 权限通道：
+      `WebChromeClient.onPermissionRequest()` 收到 `RESOURCE_VIDEO_CAPTURE` 后，
+      由 Capacitor 的 `BridgeWebChromeClient` 转成一次 `Manifest.permission.CAMERA`
+      的**运行时申请**。
+
+      而它在申请前会先查 `PermissionHelper.hasDefinedPermission()` ——
+      这个函数读的是**本文件的 uses-permission 列表**。
+      ⇒ **没声明 ⇒ 申请被直接判否，连系统权限弹窗都不会出现**，
+        JS 侧只会收到 `NotAllowedError`，表现为"点了拍照没反应/说权限被拒"，
+        但用户根本没被问过，去系统设置里也找不到这个应用的相机开关（因为没申请过）。
+
+      ★ 这是一类**只靠读 JS 代码查不出来**的缺陷：JS 写得再对，
+        漏了清单声明就是不可用，而且报错信息（NotAllowedError）会把人引向
+        "用户拒绝了权限"这个**错误结论**。
+        ⇒ 所以这里连同 `scripts/build-apk.mjs` 的权限白名单一起改（后者会拦构建）。
+
+      ── CAMERA 与"拍照片/录视频"的区别 ────────────────────────────────
+      只声明 CAMERA 就够：WebView 的 VIDiaO_CAPTURE 只要这一个。
+      **不需要** `RECORD_AUDIO`（我们不取音轨，`getUserMedia` 传的是 `audio:false`）、
+      **不需要** `WRITE_EXTERNAL_STORAGE`（照片经 `canvas.toBlob()` 落进
+      IndexedDB 的 blobs 表，不写外部存储）。
+      ⇒ 权限清单保持最小集，这既是隐私姿态，也避免用户看到一堆用不上的授权请求。
+    -->
+    <uses-permission android:name="android.permission.CAMERA" />
+
+    <!--
+      ★ 摄像头声明为**非必需**（`required="false"`）。
+
+      为什么：写了 `uses-feature required="true"`（或不写但被 CAMERA 权限隐式推导为 true）
+      会让**没有摄像头的设备在应用商店里看不到这个应用**。
+      本项目是本地安装的 APK，商店过滤不直接影响，但这条声明还有第二个作用：
+      它让"设备有没有相机"变成**运行时**事实（没相机就走 `noCamera` 分支给出可操作的提示），
+      而不是"装不上"。
+      ⇒ 与 JS 侧 `useCamera()` 的错误分类配合：没摄像头是**可降级**状态（改用「发图」选文件），
+        不该被处理成"设备不支持本应用"。
+    -->
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+</manifest>

@@ -1,0 +1,192 @@
+apply plugin: 'com.android.application'
+
+// ★ release 签名：从 `android/keystore.properties` 读（**该文件不入库**，见根 .gitignore）。
+//   为什么不在 build.gradle 里硬编码密码：本文件是入库的，密码会进版本历史且**删不掉**。
+//   文件缺失时**不报错**，只是 release 包出成 unsigned —— 这样"只想编译看看"的人
+//   （比如没拿到 keystore 的协作者）仍然能跑 `assembleBuiltinDebug`，不会被签名卡住。
+def keystorePropsFile = rootProject.file('keystore.properties')
+def keystoreProps = new Properties()
+if (keystorePropsFile.exists()) {
+    keystoreProps.load(new FileInputStream(keystorePropsFile))
+}
+
+android {
+    namespace "com.aiai.builtin"
+    compileSdk rootProject.ext.compileSdkVersion
+    defaultConfig {
+        applicationId "com.aiai.builtin"
+        minSdkVersion rootProject.ext.minSdkVersion
+        targetSdkVersion rootProject.ext.targetSdkVersion
+        versionCode 1
+        versionName "1.0"
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        aaptOptions {
+             // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
+             // Default: https://android.googlesource.com/platform/frameworks/base/+/282e181b58cf72b6ca770dc7ca5f91f135444502/tools/aapt/AaptAssets.cpp#61
+            ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
+        }
+    }
+
+    signingConfigs {
+        release {
+            if (keystorePropsFile.exists()) {
+                storeFile rootProject.file(keystoreProps['storeFile'])
+                storePassword keystoreProps['storePassword']
+                keyAlias keystoreProps['keyAlias']
+                keyPassword keystoreProps['keyPassword']
+            }
+        }
+    }
+
+    // ★ 双版本（内置欣然 / 不内置欣然）—— 详见 `src/constants/buildMode.ts`。
+    //
+    // 为什么用 **productFlavors** 而不是"打两次改两个文件"：
+    //   ① 两个包的 **applicationId 必须不同**，否则无法同时装在一台机器上
+    //      （也不能用 `<外部应用包名>` —— 那是原 Android 应用的包名，会与它冲突）；
+    //   ② 应用名也要不同，否则桌面两个图标长得一样、用户分不清哪个是哪个；
+    //   ③ flavor 让"哪一版"成为**构件的固有属性**（`assembleBuiltinRelease` /
+    //      `assembleStandaloneRelease`），而不是靠人记住当前工作区改没改过 ——
+    //      后者一旦记错，就会把内置版当 standalone 发出去。
+    //
+    // ★ `namespace` 保持 `com.aiai.builtin` 不动：它是**编译期 R 类包名**，
+    //   必须与 `MainActivity.java` 的 `package` 声明一致；`applicationId` 才是安装标识。
+    //   两者的分工是 Android 的标准做法，这里刻意不混用。
+    //
+    // ★ flavor 的 `resValue` 优先级高于 `main`，且**同名资源以 flavor 为准**，
+    //   不会与 `src/main/res/values/strings.xml` 冲突。
+    flavorDimensions += "edition"
+    productFlavors {
+        builtin {
+            dimension "edition"
+            applicationId "com.aiai.builtin"
+            // ★ 应用名（用户 2026-10-04 指定为「ai爱」）：**两个版本同名**。
+            //   原先内置版带「·欣然」后缀，用户后来明确要求两个都叫「ai爱」⇒ 去掉后缀。
+            //   两版靠 `applicationId` 区分（`.builtin` / `.standalone`），仍可同时安装；
+            //   但桌面上会显示**两个同名同图标**的入口 —— 这是用户明确要求的取舍。
+            resValue "string", "app_name", "ai爱"
+            resValue "string", "title_activity_main", "ai爱"
+            resValue "string", "package_name", "com.aiai.builtin"
+            resValue "string", "custom_url_scheme", "com.aiai.builtin"
+        }
+        standalone {
+            dimension "edition"
+            applicationId "com.aiai.standalone"
+            resValue "string", "app_name", "ai爱"
+            resValue "string", "title_activity_main", "ai爱"
+            resValue "string", "package_name", "com.aiai.standalone"
+            resValue "string", "custom_url_scheme", "com.aiai.standalone"
+        }
+    }
+
+    buildTypes {
+        release {
+            // ★ 用上面 signingConfigs.release 签名；keystore.properties 缺失时为 unsigned
+            if (keystorePropsFile.exists()) {
+                signingConfig signingConfigs.release
+            }
+
+            /* ★★ 加固（2026-10-04）—— 用户要求"使其难以被他人轻易解包、拆包和反编译"。
+             * 详细的"做了什么 / 为什么 / 怎么验证"见 `proguard-rules.pro` 与
+             * `scripts/lib/apk-hardening.mjs`；这里只记**改动本身**。
+             *
+             * ── 改动前的实测基线（v11 的 APK，务必别再退回）──────────────
+             *   `minifyEnabled false` ⇒ **零混淆**。实测 v11 的 `classes.dex`：
+             *     · 大小 6839 KB
+             *     · 字符串 `com/getcapacitor` 出现 **132 次**
+             *     · `com/getcapacitor/Bridge` 出现 33 次
+             *   ⇒ 反编译出来是一份**带完整包名、类名、方法名**的 Capacitor + AndroidX
+             *     源码级结构图。这既是体积问题（占 APK 的绝大部分），
+             *     也是最直接的"逆向友好"问题。
+             *
+             * ── 三个开关各自的作用 ──────────────────────────────────────
+             *   · `minifyEnabled true`  —— R8 的**混淆 + 压缩 + 优化**三合一：
+             *       类名/方法名/字段名重命名为无意义短名、删除未引用代码。
+             *   · `shrinkResources true` —— 删除**未被引用的资源**（前提是 minify 开着）。
+             *       注意它删的是"没人引用"的资源，不是"改名"；
+             *       资源**改名**（`res/layout/activity_main.xml` → `res/0K.xml`）由
+             *       AGP 的 resource optimization 负责，release 默认已开 ——
+             *       实测 v11 的 res/ 路径**本来就是短名**，所以这一项不是新增收益。
+             *   · `proguard-android-optimize.txt`（原先用的是非 optimize 那个）——
+             *       多开一轮方法内联 / 类合并 / 无用参数剔除。混淆强度同前者，
+             *       差别在优化轮数。用它的前提是 keep 规则写全（见 proguard-rules.pro）。
+             *
+             * ── 明确的边界（**不要以为开了它就万事大吉**）──────────────────
+             *   · 加固**不保护 `assets/public/**` 里的 web 产物**——那是 Vite 的
+             *     压缩产物，R8 碰不到。JS 侧的保护是另一条线（见 `vite.config.ts`
+             *     的 `esbuild.drop` 与构建产物无 sourcemap）。
+             *   · 加固**不改变"这个应用没有服务端"这个事实**：用户设备上的一切
+             *     仍然在用户自己的存储里。
+             *   · 加固**不是安全边界**。它抬高的是逆向的**成本**，不是抬高**不可能**。
+             *     真正敏感的东西（API Key）本来就不在包里（用户自填、存设备本地）。
+             */
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+
+            // ★ 显式关掉调试（release 默认就是 false，写出来是为了让它可被
+            //   `scripts/lib/apk-hardening.mjs` 的 badging 断言核到，而不是"默认的"）。
+            debuggable false
+
+            /* ★ 签名方案：**保持默认的 v1 + v2 + v3，不关 v1**。
+             *
+             * ── 这里记一次"试过、退回"（2026-10-04，别再来一遍）────────────
+             * 加固时曾经把 `enableV1Signing` 关掉，理由是：
+             *   v1（JAR signing）把签名散在 `META-INF/*.SF/*.RSA` 里，
+             *   可逐条读出、可逐条重签，对"防重新打包"没有贡献。
+             *
+             * **实测证伪**（v12/v13 两个包都栽在这上面）：
+             *   `apksigner verify --verbose` 直接报
+             *     `DOES NOT VERIFY` + `ERROR: Missing META-INF/MANIFEST.MF`
+             *   原因是本项目的 `minSdkVersion` 是 **23**，
+             *   而 **API 23 及以下只认 v1 签名**（v2 方案从 API 24 起才被系统支持）。
+             *   `apksigner` 会按 manifest 里的 minSdk 判定"这个包需不需要 v1"，
+             *   于是把"只有 v2"的包判成**不可验证** —— 也就是说，
+             *   它在 API 23 设备上**根本装不上**。
+             *
+             * ⇒ 结论：**v1 不能关**，除非把 `minSdkVersion` 抬到 24（那是一次
+             *   产品层面的设备支持收缩，不该在加固里顺手做）。
+             *   v1 留在包里**不会削弱 v2/v3**：Android 7+ 优先校验 v2，
+             *   v2 通过就不再回头验 v1；攻击者剥掉 v2 只能重签 v1，
+             *   而重签后的签名与我们的不同 ⇒ 无法覆盖安装，用户数据也不会被替换。
+             *   真正拦住"解包→改→重打包"的仍然是 v2/v3 的**整包摘要**。
+             *
+             * ★ 这条失败当时只被记成一条 `⚠️` note（见 `scripts/lib/apk-hardening.mjs`），
+             *   构建照样打印"✓ 全部正确"。已同步修掉：**apksigner 跑起来但验不过
+             *   现在是硬失败**，会直接拒绝出包。
+             */
+            if (keystorePropsFile.exists()) {
+                signingConfigs.release.enableV2Signing = true
+                signingConfigs.release.enableV3Signing = true
+            }
+        }
+    }
+}
+
+repositories {
+    flatDir{
+        dirs '../capacitor-cordova-android-plugins/src/main/libs', 'libs'
+    }
+}
+
+dependencies {
+    implementation fileTree(include: ['*.jar'], dir: 'libs')
+    implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"
+    implementation "androidx.coordinatorlayout:coordinatorlayout:$androidxCoordinatorLayoutVersion"
+    implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
+    implementation project(':capacitor-android')
+    testImplementation "junit:junit:$junitVersion"
+    androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
+    androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
+    implementation project(':capacitor-cordova-android-plugins')
+}
+
+apply from: 'capacitor.build.gradle'
+
+try {
+    def servicesJSON = file('google-services.json')
+    if (servicesJSON.text) {
+        apply plugin: 'com.google.gms.google-services'
+    }
+} catch(Exception e) {
+    logger.info("google-services.json not found, google-services plugin not applied. Push Notifications won't work")
+}

@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- Base application theme. -->
+    <style name="AppTheme" parent="Theme.AppCompat.Light.DarkActionBar">
+        <!-- Customize your theme here. -->
+        <item name="colorPrimary">@color/colorPrimary</item>
+        <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
+        <item name="colorAccent">@color/colorAccent</item>
+    </style>
+
+    <style name="AppTheme.NoActionBar" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <item name="windowActionBar">false</item>
+        <item name="windowNoTitle">true</item>
+        <item name="android:background">@null</item>
+    </style>
+
+    <!--
+      ★ 启动图主题（2026-10-04 补 `postSplashScreenTheme`）。
+
+      为什么必须补：`Theme.SplashScreen` 是 androidx 的启动图主题，它的工作方式是
+      「先用启动图当窗口主题 → 启动完成后**切换到 `postSplashScreenTheme` 指定的主题**」。
+      不声明 `postSplashScreenTheme` 时，这条切换链是断的 ——
+      窗口会一直停留在启动图主题上（表现为"卡在启动图"或"背景色永远不更新"）。
+
+      `android:background` 指向启动图 drawable；本应用是深色适配的，
+      `drawable-night/splash.png` 的底色是 #111111、日间版是 #161A22。
+      ★ 顺带记录一个取证细节：真机白屏事故现场那个 #111111，
+      **不是**这张启动图在显示（启动图中央有图标，而现场是纯色无图标），
+      而是「WebView 内容透明 ⇒ 透出系统深色窗口背景 `@android:color/background_dark`」。
+      真正的根因是 WebView 里的 JS 没跑起来（见 index.html 的 polyfill 注释）。
+      这里补 `postSplashScreenTheme` 是修另一个独立隐患，不是那个白屏的修复。
+    -->
+    <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
+        <item name="android:background">@drawable/splash</item>
+        <!-- 启动图撤下后切回应用主题；缺这一条会导致启动图主题不被替换 -->
+        <item name="postSplashScreenTheme">@style/AppTheme.NoActionBar</item>
+    </style>
+</resources>

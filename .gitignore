@@ -1,0 +1,140 @@
+# 依赖
+node_modules/
+.pnpm-store/
+
+# 构建产物
+dist/
+dist-ssr/
+dist-verify-*/
+build/
+
+# 本地环境变量（可能含密钥，绝不入库）
+.env
+.env.*
+!.env.example
+
+# 日志
+*.log
+npm-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# 编辑器 / 系统
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db
+*.swp
+
+# TypeScript 缓存
+*.tsbuildinfo
+
+# 测试与覆盖率
+coverage/
+
+# QA 回归的临时工作区（浏览器 profile / dist 快照 / 下载），可重建，不入库
+.qa-tmp/
+scripts/qa/out/
+scripts/qa/tmp/
+scripts/qa/last-run.log
+
+# Vite
+.vite/
+# Vite 加载 .ts 配置时产生的临时文件（正常会自动清理，这里兜底忽略）
+vite.config.ts.timestamp-*.mjs
+dist-verify/
+dist2/
+
+# 取证底稿与参考资料（不参与构建，单独存档）
+_ref/
+docs/00-逆向取证.md.bak
+
+# 脚本生成物（由 scripts/gen-assets.mjs 生成，不入库）
+# 注意：public/THIRD_PARTY.md 与 public/CHANGELOG.md 是同步副本、需要入库，不在此列
+public/sponsor-qr.png
+
+# 工作区记忆与本地工具数据（非交付物）
+.workbuddy/
+
+# —— Android 打包（Capacitor）——
+# 原生工程与构建产物：可重建，不入库（避免几千个 gradle 中间产物进版本历史）
+android/app/build/
+android/build/
+android/.gradle/
+android/local.properties
+android/app/src/main/assets/public/
+android/app/src/main/assets/capacitor.config.json
+android/app/src/main/assets/capacitor.plugins.json
+
+# ★★ 签名私钥与口令：**绝不入库**
+#    丢了无法覆盖升级（见 android/keystore.properties 注释），但进了版本库就等于公开私钥。
+android/keystore/
+android/keystore.properties
+
+# assets/ 是图标源图（1024x1024 原图），体积大且可重新生成，不入库
+assets/
+
+# 外部源码包解压产物（只读参考，非本项目代码）
+_ref/
+
+# —— APK 版本归档（2026-10-04 起，一版一目录）——
+#    每个 release/<buildId>/ 内有 2 个 APK + 1 份源码 zip（约 20 MB/版，逐版累积）。
+#    二进制交付物入库会让仓库体积失控 ⇒ 内容不入库。
+#    ★ 但索引必须留档：INDEX.md 是"历史上打过哪些包"的唯一汇总，文本、体积可忽略。
+#    ★ 由此产生一条义务：release/ 必须单独做存储层备份（见 docs/09）。
+release/*
+!release/INDEX.md
+!release/README.md
+
+# —— 一次性工作产物（非源码，不入库）——
+#    draft_f87e5da2_folder/ 是文档创作的工作区（含 15 张截图 + draft.xml/tutorial.xml 草稿），
+#    属一次性产出：无源码价值、可重建，入库只会把无关截图混进仓库。
+draft_f87e5da2_folder/
+
+# —— APK 构建输出目录（二进制交付物）——
+#    apk-out/ 是打包脚本的输出目录（APK / 源码 zip / 预览图），与上面的 release/ 同理：
+#    二进制交付物入库会让仓库体积失控 ⇒ 内容不入库；正式归档仍走 release/（见上）。
+apk-out/
+
+# —— ★ 发布用的 GitHub 凭据文件（绝不入库）——
+#    scripts/publish-github.mjs 推荐把 token 放进本地文件（`--token-file=.gh-token`），
+#    这样它不会进入 shell 历史、也不会出现在命令行参数里。
+#    ⇒ 但这也意味着它会**静静躺在工作区里**，一旦被 `git add` 带上就是公开凭据。
+#      所以这里必须挡住。★ 这两个名字与该脚本的文档一致，改名时请同步改这里。
+.gh-token
+.gh_token
+
+# —— ★ 不随公开仓库发布的内容（2026-10-05 决定）——
+#    docs/00-逆向取证.md  对第三方 App 的逆向取证底稿（302 行）
+#    docs/persona/        私人角色设定包（personae / memories / virtual-world）
+#
+#    ★ 这两项不参与公开，但**文件保留在本地**（本文件只让 git 忽略它们，不删除）。
+#    ★ 它们原本在**历史里**（首个提交就进了），因此已对 `master` 做过一次**历史重写**
+#      （git filter-branch）把这两个路径从全部提交中移除 —— 只加 .gitignore 是不够的，
+#      历史里的文件照样能被翻出来。
+#    ★ 重写前的完整备份在分支 `backup/pre-publish-2026-10-05`，
+#      需要找回或对比历史时用它（该分支不推送）。
+docs/00-逆向取证.md
+docs/persona/
+
+# —— ★ 公开暴露审计报告（**本身含真实住址，绝不能入库**）——
+#    docs/22-公开暴露清单.md 是为"推送前自查"生成的，里面为了让你核对，
+#    **原样列出了门牌号、学校、微信 bot 标识**。
+#    ⇒ 它是一份"告诉你哪里泄漏"的文档，它自己就是泄漏物 ⇒ 必须挡在仓库外。
+#    ★ 判据（容易漏）：**描述泄漏的文档要用比泄漏物更严的规则保护。**
+docs/22-公开暴露清单.md
+
+# —— ★ QA 的「原始文档素材副本」（含真实地址，不入库）———————————————
+#    scripts/qa/fixtures/world/ 是内置世界包**对账用的原始文档副本**：
+#    里面有真实门牌号、就读学校、以及一处 IM 通道账号标识。
+#
+#    ★ 为什么必须排除：它是**同一份私人内容的副本**。此前只排除了 docs/ 下那份，
+#      漏了这个副本 —— 教训：**脱敏要按「内容」全仓库搜，不能只按「路径」排除**。
+#
+#    ★ 排除后怎么保证 QA 还能跑：check-world-drift.mjs 已改为**优雅降级**
+#      （素材缺失 ⇒ 打印说明并以 0 退出，不崩、也不静默通过）。
+#      本地保留本目录即可跑完整对账。
+#
+#    ★ private-facts.json 是从脚本里**搬出来**的含真值断言（5 条），同样不入库。
+scripts/qa/fixtures/world/

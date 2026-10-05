@@ -1,0 +1,270 @@
+ai爱（ai-ai-web）· 源码可用许可协议
+================================================
+
+版本：1.0
+生效日期：2026 年
+著作权人（下称「许可人」）：ai-ai-web
+
+★ 性质说明（务必先读）
+----------------------
+本协议是源码可用（source-available）许可，不是开源（open source）许可。
+「开源」在通行定义（如开放源代码促进会 OSI 的《开源定义》）中要求允许他人自由地修改
+与再分发本软件，而本协议第四条、第五条明确禁止商业使用、修改与再分发。
+因此，请勿将本软件或本协议描述为「开源」；准确的说法是「源码可用（source-available）」。
+
+
+第一条 · 定义
+--------------
+1.1 「本软件」指本仓库（repository）内的全部源代码、文档、资源文件、脚本与配置，
+    以及与之相关的任何更新、补丁与后续版本。
+1.2 「许可人」指本软件的著作权人 ai-ai-web。
+1.3 「你」（或「使用者」）指任何接触、获取、复制或在本地运行本软件的自然人或法人。
+1.4 「商业用途」指任何以营利为目的、或具有直接或间接商业利益的使用，具体形态见第四条。
+1.5 「再分发」指以任何方式向第三方提供本软件的全部或部分，无论是否收费、是否修改。
+1.6 「书面授权」指许可人通过本仓库 Issue、电子邮件或其他可留存记录的方式作出的、
+    针对特定事项的明确同意。
+
+
+第二条 · 著作权归属
+------------------
+2.1 本软件的著作权及相关知识产权均归许可人 ai-ai-web 所有，© 2026 ai-ai-web，
+    保留所有权利（All Rights Reserved）。
+2.2 本协议仅授予你使用本软件的有限权利，不构成任何著作权或所有权的转让。
+2.3 本软件中若包含第三方组件，该等组件仍受其各自许可条款约束；本协议不改变这些条款。
+
+
+第三条 · 授予的权利（你被允许做什么）
+------------------------------------
+在完全遵守本协议全部条款的前提下，许可人在此授予你一项有限的、非独占的、
+不可转让的、不可再许可的、可随时撤销的权利，允许你：
+
+3.1 查阅与阅读本软件的源代码，用于学习与研究其实现思路；
+3.2 在本地环境自行运行本软件，以评估其功能与效果（即为「评估试用」目的）；
+3.3 为上述目的，在你自有的设备或私有环境中复制本软件一份存档副本。
+3.4 为免歧义：本软件自身即设计为可由使用者通过其界面进行配置（例如填写模型接口地址、
+    选择模型、设置界面语言与主题）。此类按本软件既有功能进行的配置操作属于 3.2 所称的
+    「运行」，不构成本协议第五条所禁止的「修改」。
+
+★ 上述权利仅限个人、非商业用途。除此以外的任何使用，均须事先取得许可人的书面授权。
+
+
+第四条 · 禁止商业用途
+--------------------
+4.1 你不得对本软件进行任何形式的商业使用。
+4.2 被禁止的商业使用形态包括但不限于：
+    (a) 销售、出租、出借、许可（再许可）本软件或对其收费；
+    (b) 将本软件的全部或部分集成进任何商业产品、商业服务或商业平台；
+    (c) 使用本软件提供任何付费服务，或作为付费服务的技术组成部分；
+    (d) 使用本软件进行获客、引流、营销推广，或用于提升任何商业实体的收益；
+    (e) 将本软件作为商业产品的组成部分（含作为内部工具服务于商业运营）；
+    (f) 将本软件以 SaaS（软件即服务）/ 云托管 等形式向第三方提供；
+    (g) 在应用商店、软件分发平台或任何渠道商业分发基于本软件或以本软件为原料的产物；
+    (h) 使用本软件从事企业内部经营活动，或以任何方式获取商业利益。
+4.3 是否存在商业属性由许可人合理判断；有疑问时，请依第六条事先取得授权。
+
+
+第五条 · 禁止未经授权的修改、二次开发与再分发
+--------------------------------------------
+5.1 未经许可人事先书面授权，你不得：
+    (a) 修改、改编、翻译或以其他方式变更本软件的任何部分（即「二次开发」）；
+    (b) 基于本软件创建衍生作品（derivative work），包括但不限于分支、移植、换皮、
+        改名或其他实质性重制；
+    (c) 将本软件或其任何衍生作品再分发、发布、上传、共享或以任何方式提供给第三方；
+    (d) 再许可（sublicense）、转让本协议项下的权利，或将本软件并入其他许可体系；
+    (e) 删除、遮盖或篡改本软件中的著作权声明、作者署名、许可声明或其他权利标识。
+5.2 上述任一行为，均须事先取得许可人的书面授权方可进行。
+
+
+第六条 · 取得授权的正规通路
+--------------------------
+6.1 如需超出第三条范围使用（含商业使用、修改、二次开发或再分发），请通过以下正规通路
+    向许可人申请书面授权：
+    (a) 在本仓库的 Issue 区提交授权申请（推荐，公开留痕）；
+    (b) 或通过 GitHub 账号 ai-ai-web（https://github.com/ai-ai-web）联系。
+    (c) 或通过我的邮箱2446136141@qq.com 进行联系。
+6.2 授权申请请说明：使用主体、使用目的、是否商业使用、拟进行的修改或再分发范围。
+6.3 任何授权仅在许可人以书面形式明确同意后方为有效；未获书面同意的行为不产生授权，
+    并构成对本协议的违反。
+
+
+第七条 · 许可终止
+----------------
+7.1 你违反本协议任意一条款时，本协议授予你的全部权利即时自动终止，无需许可人另行通知。
+7.2 许可人亦可在任何时间、以任何理由，通过通知撤销本协议授予的权利。
+7.3 权利终止后，你须立即停止一切使用，并在合理期限内销毁你所持有或控制的本软件的
+    全部副本（含修改版、衍生作品与相关材料），并向许可人书面确认销毁。
+7.4 第二条、第四条、第五条、第七条、第八条及第九条在权利终止后继续有效。
+
+
+第八条 · 免责声明
+----------------
+8.1 本软件按「现状」（AS IS）提供，不附带任何明示或默示的担保，包括但不限于对
+    适销性、特定用途适用性、权利完整性及不侵权的默示担保。
+8.2 许可人不保证本软件无错误、无中断、安全或满足你的任何特定需求。
+8.3 在适用法律允许的最大范围内，许可人不对因使用或无法使用本软件而产生的任何直接、
+    间接、附带、特殊、惩罚性或后果性损失（含数据丢失、利润损失、业务中断等）承担任何责任，
+    无论其基于合同、侵权（含过失）或其他法律理论，即使许可人已被告知发生此类损失的可能性。
+8.4 若适用法律不允许排除或限制上述责任，则本第 8.3 条在该法律允许的范围内适用。
+
+
+第九条 · 其他条款
+----------------
+9.1 完整协议：本协议构成你与许可人之间就本软件使用达成的完整约定，取代此前的任何口头
+    或书面沟通。
+9.2 可分割性：本协议任一条款若被认定无效或不可执行，不影响其余条款的效力；该条款应在
+    法律允许范围内以最接近其原意的有效条款替代。
+9.3 权利保留：本协议未明示授予的权利，均由许可人保留。
+9.4 准据法与语言：本协议以中文文本为准；附随英文译本仅为便利阅读，若中英文存在
+    任何歧义或不一致，概以中文文本为准。
+
+
+────────────────────────────────────────────────────────────────────
+ai-ai-web · © 2026 · 保留所有权利（All Rights Reserved）
+
+
+================================================================================
+ENGLISH VERSION (for reference only; the Chinese text prevails)
+================================================================================
+
+ai爱 (ai-ai-web) — SOURCE-AVAILABLE LICENSE
+Version 1.0 · Effective 2026
+Copyright holder (the "Licensor"): ai-ai-web
+
+NATURE OF THIS LICENSE
+----------------------
+This license is a SOURCE-AVAILABLE license. It is NOT an open-source license.
+Under the widely accepted definition of "open source" (e.g. the Open Source
+Definition of the Open Source Initiative, OSI), a license must permit others
+to freely modify and redistribute the software. Sections 4 and 5 below expressly
+prohibit commercial use, modification, and redistribution. Do NOT describe this
+software or this license as "open source"; the accurate term is
+"source-available."
+
+1. DEFINITIONS
+   1.1 "Software" means all source code, documentation, assets, scripts and
+       configuration in this repository, together with any updates, patches and
+       subsequent versions thereof.
+   1.2 "Licensor" means ai-ai-web, the copyright holder of the Software.
+   1.3 "You" means any natural or legal person accessing, obtaining, copying or
+       locally running the Software.
+   1.4 "Commercial Use" means any use for profit or any use with a direct or
+       indirect commercial benefit, as further detailed in Section 4.
+   1.5 "Redistribute" means making all or part of the Software available to any
+       third party in any manner, whether for a fee and whether modified.
+   1.6 "Written Authorization" means the Licensor's express consent given through
+       this repository's Issues, by email, or by any other record-retaining means.
+
+2. COPYRIGHT
+   2.1 All copyright and related intellectual-property rights in the Software are
+       owned by the Licensor, ai-ai-web. (c) 2026 ai-ai-web. ALL RIGHTS RESERVED.
+   2.2 This license grants You a limited right to USE the Software only; it does
+       NOT constitute any assignment or transfer of copyright or ownership.
+   2.3 Third-party components remain governed by their own license terms, which
+       this license does not alter.
+
+3. RIGHTS GRANTED (WHAT YOU MAY DO)
+   Subject to full compliance with this license, the Licensor grants You a
+   limited, non-exclusive, non-transferable, non-sublicensable and revocable
+   right to:
+   3.1 Read and inspect the Software's source code for the purpose of learning
+       and study;
+   3.2 Run the Software locally for the sole purpose of evaluating it;
+   3.3 Make one archival copy of the Software on devices or in environments that
+       You own, for the purposes above.
+   3.4 For the avoidance of doubt: the Software is by design configurable by the
+       user through its own interface (e.g. entering a model API endpoint,
+       selecting a model, setting the interface language and theme). Such
+       configuration operations performed in accordance with the Software's
+       existing functionality constitute "running" within the meaning of 3.2 and
+       do NOT constitute "modification" prohibited under Section 5.
+   These rights are for PERSONAL, NON-COMMERCIAL use only. Any other use requires
+   the Licensor's prior Written Authorization.
+
+4. PROHIBITION OF COMMERCIAL USE
+   4.1 You must NOT engage in any Commercial Use of the Software.
+   4.2 Prohibited forms include, without limitation:
+       (a) selling, renting, lending, licensing (sub-licensing) or charging for
+           the Software;
+       (b) integrating all or part of the Software into any commercial product,
+           commercial service or commercial platform;
+       (c) using the Software to provide any paid service or as part of one;
+       (d) using the Software for customer acquisition, traffic generation,
+           marketing, or to benefit any commercial entity;
+       (e) using the Software as a component of a commercial product (including
+           as an internal tool serving commercial operations);
+       (f) providing the Software to third parties as a SaaS / hosted service;
+       (g) commercially distributing, on any app store or channel, anything based
+           on or derived from the Software;
+       (h) using the Software for a business's internal operations or to obtain
+           any commercial benefit.
+   4.3 Whether a use is commercial is determined reasonably by the Licensor; if in
+       doubt, obtain authorization under Section 6 in advance.
+
+5. PROHIBITION OF UNAUTHORIZED MODIFICATION, DERIVATION AND REDISTRIBUTION
+   Without the Licensor's prior Written Authorization, You must NOT:
+   5.1 (a) modify, adapt, translate or otherwise alter any part of the Software
+           ("secondary development");
+       (b) create derivative works based on the Software, including forks,
+           ports, re-skins, rebrands or other substantial re-implementations;
+       (c) redistribute, publish, upload, share or otherwise make the Software or
+           any derivative available to any third party;
+       (d) sublicense the rights under this license or transfer the Software into
+           another licensing scheme;
+       (e) remove, obscure or alter any copyright notice, attribution, license
+           notice or other proprietary marking in the Software.
+   5.2 Any of the foregoing requires the Licensor's prior Written Authorization.
+
+6. HOW TO OBTAIN AUTHORIZATION
+   6.1 For any use beyond Section 3 (including commercial use, modification,
+       secondary development or redistribution), apply for Written Authorization
+       through these proper channels:
+       (a) open an authorization request in this repository's Issues (preferred,
+           for a public record); or
+       (b) contact the GitHub account ai-ai-web (https://github.com/ai-ai-web).
+   6.2 Your request should state: the entity, the purpose, whether it is
+       commercial, and the intended scope of modification or redistribution.
+   6.3 Any authorization is valid ONLY upon the Licensor's express consent in
+       writing. Acts without such consent are unauthorized and breach this
+       license.
+
+7. TERMINATION
+   7.1 Your rights under this license terminate AUTOMATICALLY and IMMEDIATELY, with
+       no further notice, upon your breach of any provision.
+   7.2 The Licensor may also revoke the rights granted at any time and for any
+       reason upon notice.
+   7.3 Upon termination You must immediately cease all use and, within a
+       reasonable time, DESTROY all copies of the Software (including modified
+       versions, derivatives and related materials) in your possession or control,
+       and confirm the destruction to the Licensor in writing.
+   7.4 Sections 2, 4, 5, 7, 8 and 9 survive termination.
+
+8. DISCLAIMER OF WARRANTY AND LIABILITY
+   8.1 The Software is provided "AS IS", without warranty of any kind, express or
+       implied, including but not limited to the implied warranties of
+       merchantability, fitness for a particular purpose, title and
+       non-infringement.
+   8.2 The Licensor does not warrant that the Software is error-free,
+       uninterrupted, secure, or fit for your needs.
+   8.3 To the maximum extent permitted by applicable law, the Licensor shall NOT
+       be liable for any direct, indirect, incidental, special, punitive or
+       consequential damages (including lost data, lost profits or business
+       interruption) arising from the use of, or inability to use, the Software,
+       whether based in contract, tort (including negligence) or otherwise, even
+       if advised of the possibility of such damages.
+   8.4 If applicable law does not allow the exclusion or limitation above,
+       Section 8.3 applies to the fullest extent such law permits.
+
+9. GENERAL
+   9.1 ENTIRE AGREEMENT: This license is the entire agreement between You and the
+       Licensor regarding the Software and supersedes any prior communication.
+   9.2 SEVERABILITY: If any provision is held invalid or unenforceable, the
+       remaining provisions remain in effect, and the provision is replaced by the
+       valid provision closest to its original intent.
+   9.3 RESERVATION OF RIGHTS: All rights not expressly granted are RESERVED by the
+       Licensor.
+   9.4 GOVERNING TEXT AND LANGUAGE: The CHINESE text of this license is
+       controlling. The English translation is provided for convenience only;
+       in case of any ambiguity or inconsistency, the CHINESE text prevails.
+
+--------------------------------------------------------------------------------
+ai-ai-web · (c) 2026 · All Rights Reserved
